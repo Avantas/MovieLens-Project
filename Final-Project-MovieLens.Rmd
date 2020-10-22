@@ -25,15 +25,15 @@ urlcolor: blue
 \pagebreak
 # The Project {-}
 
-This is a Machine Learning Project named MovieLens, it is a recomendation system of movies based in 10 millons dataset. The sourse of this work is provided for [Group Lens](https://grouplens.org/datasets/movielens/10m/), presing [here!!](http://files.grouplens.org/datasets/movielens/ml-10m.zip)
+This is a Machine Learning Project named MovieLens, it is a recomendation system of movies based in 10 millons dataset. The sourse of the dataset in this work is provided for [Group Lens](https://grouplens.org/datasets/movielens/10m/), for download, press [here!!](http://files.grouplens.org/datasets/movielens/ml-10m.zip)
 
 This work is part of the final project for the Data Science Professional certificate of HarvardX. In October 2006, Netflix offered a challenge to the data science community: improve our recommendation algorithm by 10% and win a million dollars.
 
-# The Objetive
+# The Objetive {-}
 
-I will explore the data and construct a model describing the complete process, the method to compare diferents models will be trough RMSE (root mean squared error) between the true data and predicted data. 
+We will explore the data and construct a Machine Learning algorithm, describing the complete process, the method to compare diferents models will be trough RMSE (root mean squared error) between the true data and predicted data. 
 
-We will create a data set that we work and a validation data set. But we need to be sure don't use the validation dataset for define the model. For this cuestion, we will create a data partition of the training data for test it and define the model.
+We need create a data set that we will work and a validation data set. But we need to be sure don't use the validation dataset for define the model. For this cuestion, we will create a data partition of the training data for test it and define the model.
 
 We need obtain a RMSE < 0.86490 in the final validation for the total calification.
 
@@ -42,8 +42,7 @@ We need obtain a RMSE < 0.86490 in the final validation for the total calificati
 
 The Netflix data is not publicly available, but the GroupLens research lab generated their own database with over 20 million ratings for over 27,000 movies by more than 138,000 users.
 
-We start with the cration of **edx** and **validation** objects and loading the packages i will use.
-The first step is to load the diferents library we will use.
+We start with the cration of **edx** and **validation** objects and loading the packages and libraries we will use.
 
 ```{r, warning=FALSE, message=FALSE}
 if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
@@ -95,7 +94,7 @@ rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
 # Analysis
 
-For start the project, we have two objets with will work, it is the **edx** (where the information we train and test the model), and **validation** object (for test our model when we finish out analysis)
+It's important don't use the the **validation** data for train and test, it is because we need a eficient model for the data in the future, the final objetive is recomend movies to users, the true rating will ocurr after our recomendation.
 The fisrt step, is to take **edx** object and make a data partition **train_set** and **test_set**:
 
 ## Data partition
@@ -117,7 +116,7 @@ test_set <- test_set %>%
 
 ### Exploring the data before to start 
 
-For investigate the dataset we look, how many diferents movies are in the dataset, and how many diferents users.
+For explore the dataset, we start for know how many diferents movies are in the dataset, and how many diferents users.
 
 ```{r}
 train_set %>% 
@@ -125,7 +124,7 @@ train_set %>%
             n_movies = n_distinct(movieId))
 ```
 
-Also we can observe that the "gendres" variable have differents asociated gendres.
+Also we can observe that the "genres" variable have differents asociated genres.
 
 ```{r}
 head(train_set$genres)
@@ -139,9 +138,11 @@ edx %>% group_by(rating) %>% ggplot(aes(rating)) + geom_density()
 
 ## Creation of the RMSE function
 
-With the porpouse of messure the _root mean squared error_ (RMSE), we create the function;
+With the porpouse of messure the _root mean squared error_ (RMSE), we define;  
 
 $$RMSE=\sqrt{\frac{1}{N}\sum_{u,i}(\hat{y}_{u,i}-y_{u,i})^2}$$
+
+Where **y** is the rating for each movie **_i_** by user **_u_** and our prediction, and **N** being the number of user/movie combinations and the sum occurring over all these combinations.
 
 ```{r, echo= TRUE}
 RMSE <- function(true_ratings, predicted_ratings){
@@ -149,13 +150,15 @@ RMSE <- function(true_ratings, predicted_ratings){
 }  
 ```
 
+The RMSE is similarly to a standard deviation: it is the typical error we make when predicting a movie rating. If this number is larger than 1, it means our typical error is larger than one star, which is not good.
+
 ## The simplest model
 
-The simplest model we can make, is the mean rating more de diferences for movie and user.
+The simplest possible recommendation system is the same rating for all movies regardless of user. A model that assumes the same rating for all movies and users with all the differences explained by random variation would look like this:
 
 $$y_{u,i} = \mu + \epsilon_{u,i}$$
 
-We compute the RMSE.
+With $\epsilon$ independent errors sampled from the same distribution centered at 0 and $\mu$ the “true” rating for all movies.
 
 ```{r}
 mu_hat <- mean(train_set$rating)
@@ -171,7 +174,7 @@ We save the result in a new object for compare results later.
 rmse_results <- tibble(method = "Just the average", RMSE = naive_rmse)
 ```
 
-## _Movie effect_
+## _Modeling movie effect_
 
 For model the _movie effect_, which implies, a *bias* added to the before model who move the mean for the mean of movie, we write;
 
@@ -185,7 +188,7 @@ movie_avgs <- train_set %>%
   summarize(b_i = mean(rating - mu))
 ```
 
-And the distribution of bias is;
+The distribution of bias is;
 
 ```{r, echo=FALSE}
 qplot(b_i, data = movie_avgs, bins = 10, color = I("black"))
@@ -204,13 +207,13 @@ movie_effect
 
 We can see, the model including movie effect is better.
 
-## _User effect_
+## _Modeling user effect_
 
 We add to the before model the user effect:
 
 $$y_{u,i} = \mu + bi + bu + \epsilon_{u,i}$$
 
-We observe the distribution of the diferents users;
+We observe the distribution for diferents users;
 
 ```{r, echo=FALSE}
 train_set %>% 
@@ -221,7 +224,7 @@ train_set %>%
   geom_histogram(bins = 30, color = "black")
 ```
 
-Then, we calculate de average for users;
+We calculate de average for users;
 
 ```{r, message=FALSE}
 user_avgs <- train_set %>% 
@@ -243,11 +246,12 @@ user_effect <- RMSE(predicted_ratings, test_set$rating)
 user_effect
 ```
 
-Now, we see a sustancially diferent with others model.
+Sustancially diferent with others models.
 
 ## Regularization models
 
 If we explore the data for observe mistakes, we can see easily, there are movies with a fews ratings. Regularization permits us to penalize large estimates that are formed using small sample sizes.
+
 For that we test which Lambda is the optimal ones that aport the minimal RMSE;
 
 ```{r, message=FALSE, warning=FALSE}
@@ -303,7 +307,7 @@ rmse_results <- tibble(method = c("Just the average", "Movie effect Model", "Mov
 rmse_results
 ```
 
-# Do this better
+# Improve it.
 
 If we want to do this better, we need to think about the data. We observe, the date where the movie was filmed and the date where was ranked for each users.
 Another information we can consider is the gendres of the movies. For all this we need to process original data.
@@ -313,7 +317,7 @@ Another information we can consider is the gendres of the movies. For all this w
 
 ### Dates transformation
 
-If we look inside the data, we can observe all the titles of the films have the year were was released. It will permit as, after process, add to the models.
+If we look inside the data, we can observe all the titles of the films have the year were was released.
 
 ```{r}
 head(train_set$title)
@@ -423,7 +427,7 @@ There is not significant results by oldness movie.
 
 ## Moving the average in a function
 
-Like we optimize the parameter "Lambda", we will move the mean near the average (mu), is posible there a value who report a better result for the RMSE. We plot the mu vs. rmses.
+Like we optimize the parameter "Lambda", we will move the mean near the average $\mu$, is posible there a value who report a better result for the RMSE. We plot the $\mu$ vs. rmses.
 
 ```{r, message=FALSE, warning= FALSE}
 
@@ -459,7 +463,7 @@ rmses <- sapply(mu, function(mu){
 qplot(mu, rmses)  
 ```
 
-We can see there are a optimal mu over the average.
+We can see there are a optimal $\mu$ over the average.
 
 ```{r}
 mu <- mu[which.min(rmses)]
@@ -478,13 +482,13 @@ The new RMSE is better, but in not suficient.
 
 ## Add the genre to the model
 
-We will try modeling also the genre, but, instead for each individual genres, for the convination of them. We can see there are near 800 diferent convinations.
+We will try modeling also the genre, but, instead for each individual genres, for the combination of them. We can see there are near 800 diferent combinations.
 
 ```{r}
 train_set %>% group_by(genres) %>% summarize(b_gen = mu-mean(rating))
 ```
 
-We model;
+We training;
 
 ```{r}
 mu <- mean(train_set$rating)
@@ -531,7 +535,7 @@ rmse_results
 
 Now we obtain a significant result.
 
-We fit again the mu parameter for more presicion.
+We fit again the $\mu$ parameter for more presicion.
 
 ```{r, message=FALSE, warning=FALSE}
 mu <- mean(train_set$rating)+seq(0.1, 0.3, 0.05)
@@ -586,7 +590,7 @@ rmse_results
 
 # Validation
 
-For test our best model, the last one, we need to process now with the validation set. For train our model we will use the complete training set "edx". Like edx have more data can be posible a improvement respect our last training.
+For test our best model, the last one, we need to process now with the validation set. For train our model we will use the complete training set "edx". Like edx have more data, can be posible a improvement respect our last training.
 
 We use our optimized parameters.
 
@@ -634,10 +638,17 @@ rmse_results <- tibble(method = c("Just the average", "Movie effect Model", "Mov
 rmse_results
 ```
 
-# Conclusion and Results
+# Results {-}
 
-Exploration data is a process, we start with a very simple model and advance trought we were knowing the data.
+In the final validation, were obtain a RMSE of **0.86450** , it is better of the objetive (0.86490).
 
-In the final validation, obtain a RMSE of **0.86450** , it is better of the objetive (0.86490).
+# Conlusions {-}
+
+In the Netflix challenge the winning score was RMSE=0.8712.
+Data exploration is a process, we start with a very simple model and advance in more complex models trought we were knowing the data.
+
+I obtain the objetive RMSE with a computational power of a desktop computer, and always is posible move the average in the base of the model for optimize, denote a coarse fit. Its posible improve it, ensemble models, and moving parameters, also using models like Random Forest, Matriz Factorization, SVD and PCA. 
+
+ 
 
 
